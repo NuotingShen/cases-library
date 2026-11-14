@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital–Physical Vis Library</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --surface-2: #f0ede6;
+    --text: #1f2328;
+    --muted: #646b73;
+    --border: #e2ddd3;
+    --accent: #2f6f8f;
+    --accent-soft: #e3eef3;
+    --display: #3c7fa6;
+    --actuate: #c2643a;
+    --both: #7a5aa6;
+    --gap: #fbf3e4;
+    --gap-border: #e8c98f;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.05);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16191d; --surface: #1f2328; --surface-2: #262b31; --text: #e8eaed;
+      --muted: #9aa1a9; --border: #333a42; --accent: #7fb8d4; --accent-soft: #23343d;
+      --display: #6aaed4; --actuate: #e08c63; --both: #a98ad3;
+      --gap: #2b261c; --gap-border: #6b5a36; --shadow: 0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16191d; --surface: #1f2328; --surface-2: #262b31; --text: #e8eaed;
+    --muted: #9aa1a9; --border: #333a42; --accent: #7fb8d4; --accent-soft: #23343d;
+    --display: #6aaed4; --actuate: #e08c63; --both: #a98ad3;
+    --gap: #2b261c; --gap-border: #6b5a36; --shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 16px 64px; }
+  header h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 720px; }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin: 22px 0 12px;
+  }
+  .search {
+    flex: 1 1 260px; min-width: 0; padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit;
+  }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button, .btn {
+    font: inherit; border: 0; background: var(--surface); color: var(--text);
+    padding: 8px 12px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .btn { border: 1px solid var(--border); border-radius: 8px; }
+  .filters {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; display: grid; gap: 8px;
+  }
+  .fgroup { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .fgroup .label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); width: 150px; flex: none; }
+  .chip {
+    font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip .n { opacity: .6; margin-left: 4px; font-size: 12px; }
+  .status { color: var(--muted); font-size: 14px; margin: 14px 0 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .status a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow); cursor: pointer; display: flex; flex-direction: column;
+    transition: transform .12s ease;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .thumb { aspect-ratio: 16 / 10; background: var(--surface-2); position: relative; }
+  .thumb img, .thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .rolebar { height: 4px; }
+  .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .title { font-weight: 600; line-height: 1.3; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .combo { font-size: 13.5px; color: var(--text); }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: auto; padding-top: 6px; }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .tag.role { color: #fff; border: 0; }
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: separate; border-spacing: 6px; width: 100%; min-width: 720px; }
+  .matrix th { font-size: 13px; color: var(--muted); font-weight: 600; text-align: left; padding: 4px 6px; }
+  .matrix td { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; vertical-align: top; padding: 8px; min-width: 150px; }
+  .matrix td.empty { background: var(--gap); border: 1px dashed var(--gap-border); color: var(--muted); font-size: 13px; }
+  .mitem { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; margin-bottom: 5px; cursor: pointer; }
+  .mitem:hover { border-color: var(--accent); }
+  .rowhead { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--text) !important; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 10px; }
+  dialog {
+    border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(760px, calc(100vw - 32px));
+    background: var(--surface); color: var(--text); box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .dhead { display: flex; justify-content: space-between; gap: 12px; padding: 16px 18px 0; }
+  .dhead h2 { margin: 0; font-size: 20px; line-height: 1.3; }
+  .close { font: inherit; font-size: 22px; line-height: 1; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; }
+  .dimg { margin: 12px 18px 0; border-radius: 10px; overflow: hidden; aspect-ratio: 16/9; background: var(--surface-2); }
+  .dimg img, .dimg svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  dl.fields { display: grid; grid-template-columns: 170px 1fr; gap: 8px 14px; padding: 14px 18px 18px; margin: 0; }
+  dl.fields dt { color: var(--muted); font-size: 13px; }
+  dl.fields dd { margin: 0; }
+  .empty-state { text-align: center; color: var(--muted); padding: 40px 0; }
+  @media (max-width: 640px) {
+    .fgroup .label { width: 100%; }
+    dl.fields { grid-template-columns: 1fr; }
+    dl.fields dt { margin-top: 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Digital–Physical Visualization Library</h1>
+    <p>Cases combining physical data representations with digital content, coded by how the digital and physical parts are combined and how people use them together.</p>
+  </header>
+
+  <div class="toolbar">
+    <input class="search" id="search" type="search" placeholder="Search titles, authors, descriptions…" aria-label="Search">
+    <div class="seg" role="group" aria-label="View">
+      <button id="viewCards" aria-pressed="true">Cards</button>
+      <button id="viewMatrix" aria-pressed="false">Design space</button>
+    </div>
+    <div class="seg" role="group" aria-label="Sort">
+      <button id="sortNew" aria-pressed="true">Newest</button>
+      <button id="sortOld" aria-pressed="false">Oldest</button>
+    </div>
+    <button class="btn" id="themeBtn" aria-label="Toggle theme">◐</button>
+  </div>
+
+  <div class="filters" id="filters"></div>
+  <div class="status" id="status"></div>
+  <div id="view"></div>
+</div>
+
+<dialog id="detail" aria-labelledby="dtitle"></dialog>
+
+<script>
+/* =========================================================================
+   PAPERS — add a new case by copying one object below.
+   Images: put a picture in images/<id>.jpg (or set "image" to any URL).
+   If no image is found, a placeholder is drawn automatically.
+   Allowed values:
+     category: "Pure Overlay" | "Actuated + Overlay" | "Actuated"
+     role:     "Display" | "Actuate + Display" | "Actuate"
+     flow:     "Digital → Physical" | "Physical → Digital" | "Bidirectional"
+     spatial:  any of "On top", "Underneath", "Around", "Above", "Inside", "Separate"
+     collaboration: "Individual" | "Presentation" | "Shared" | "Collaboration"
+   ========================================================================= */
+const PAPERS = [
+  { id: "tangiblenet", title: "TangibleNet", authors: "Takahira et al.", year: 2025, category: "Pure Overlay",
+    physical: "Double-sided magnets", digital: "Projector-based AR prototype",
+    combination: "Projected content is overlaid on and around the physical magnets, which serve as tangible elements.",
+    role: "Display", flow: "Bidirectional", spatial: ["On top", "Around"], collaboration: "Presentation", encodesData: "No",
+    url: "", notes: "One person operates and explains to an audience." },
+  { id: "augmented-urban-models", title: "Augmented urban models", authors: "Benkhelifa et al.", year: 2025, category: "Pure Overlay",
+    physical: "Urban physical 3D model", digital: "Virtual 2D data windows, AR",
+    combination: "AR places virtual data windows on and around the physical urban model.",
+    role: "Display", flow: "Digital → Physical", spatial: ["Around"], collaboration: "Individual", encodesData: "No", url: "", notes: "" },
+  { id: "physical-referent", title: "Exploring Physical Referent", authors: "Perelman et al.", year: 2024, category: "Pure Overlay",
+    physical: "Physical referent", digital: "AR, space-time cube",
+    combination: "AR visualization is anchored to the physical referent it describes.",
+    role: "Display", flow: "Digital → Physical", spatial: ["Around"], collaboration: "Individual", encodesData: "No", url: "", notes: "" },
+  { id: "printed-dataviz", title: "Printed data visualization", authors: "Tong et al.", year: 2023, category: "Pure Overlay",
+    physical: "Paper sheets (printed data)", digital: "AR dynamic updates",
+    combination: "AR overlays dynamic updates on top of the static printed data.",
+    role: "Display", flow: "Digital → Physical", spatial: ["On top"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+  { id: "multitouch-querying", title: "Multi-Touch Querying", authors: "Herman et al.", year: 2021, category: "Pure Overlay",
+    physical: "3D printed terrain models, anatomical scans, or abstract data", digital: "AR overlay to display results",
+    combination: "Touching the physical model triggers queries; results appear as an AR overlay on the model.",
+    role: "Display", flow: "Bidirectional", spatial: ["On top"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+  { id: "uplift", title: "Uplift", authors: "Ens et al.", year: 2021, category: "Pure Overlay",
+    physical: "3D model on a central tabletop display with tangible interaction", digital: "Augmented reality, mid-air data visualisation",
+    combination: "Tangible objects on the tabletop control the model; AR shows synchronized mid-air visualizations above the table.",
+    role: "Display", flow: "Bidirectional", spatial: ["Underneath", "Above"], collaboration: "Collaboration", encodesData: "Partly",
+    url: "", notes: "Multiple people analyze together with synchronized AR views." },
+  { id: "damiao-dataphys", title: "Damião's Dataphys Project", authors: "", year: 2017, category: "Pure Overlay",
+    physical: "Physical charts cut from acrylic", digital: "iPad app adding audio and braille for blind users",
+    combination: "The physical chart is explored by touch; the iPad app adds audio and braille feedback.",
+    role: "Display", flow: "Digital → Physical", spatial: ["Underneath"], collaboration: "Individual", encodesData: "Yes",
+    url: "", notes: "To check: whether the chart is placed on the iPad, and whether touch is used as input." },
+  { id: "passim", title: "Passim: Visual Reconceptualisation of Spatial Theories", authors: "", year: 2015, category: "Pure Overlay",
+    physical: "Physical sculpture", digital: "Projected visualisations of geopolitical data",
+    combination: "Visualizations are projected onto the physical sculpture.",
+    role: "Display", flow: "Digital → Physical", spatial: ["On top"], collaboration: "Shared", encodesData: "Not sure",
+    url: "", notes: "Displayed in public." },
+  { id: "white-house-sculpture", title: "Data Sculpture in the White House", authors: "", year: 2014, category: "Pure Overlay",
+    physical: "3D-printed sculpture of the sound wave of Obama's speech", digital: "Movement sensor and laser scanning",
+    combination: "A sensor triggers a laser scan of the physical sculpture, which turns its shape back into sound.",
+    role: "Display", flow: "Physical → Digital", spatial: ["Around"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "season-in-review", title: "Season in Review: iPad + Physical Charts Show Baseball Stats", authors: "", year: 2013, category: "Pure Overlay",
+    physical: "Physical charts cut from acrylic", digital: "iPad highlights chart edges depending on the app selection",
+    combination: "Physical charts are placed on the iPad; the screen underneath highlights chart edges.",
+    role: "Display", flow: "Digital → Physical", spatial: ["Underneath"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+  { id: "emoto", title: "Emoto: Projection Augmented Heatmaps of Twitter Data", authors: "", year: 2012, category: "Pure Overlay",
+    physical: "Physical data sculpture", digital: "Projected heat maps; interactive controller to navigate themes",
+    combination: "Heat maps are projected onto the physical sculpture; a controller switches between themes.",
+    role: "Display", flow: "Digital → Physical", spatial: ["On top", "Separate"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "parm", title: "PARM: Static Terrain Models with Projection", authors: "", year: 2012, category: "Pure Overlay",
+    physical: "Static physical relief model", digital: "Top projection of landscape details and data overlays",
+    combination: "Top-down projection onto the static relief model adds details and data layers.",
+    role: "Display", flow: "Digital → Physical", spatial: ["On top"], collaboration: "Shared", encodesData: "Partly", url: "", notes: "" },
+
+  { id: "relief-inform", title: "Interactive Shape Displays (Relief, inFORM)", authors: "Leithinger et al.", year: 2009, category: "Actuated + Overlay",
+    physical: "120 motorized pins (Relief); 900 motorized pins (inFORM)", digital: "Pins sense push/pull; projection on top; depth camera for mid-air gestures",
+    combination: "The system both moves the pins and projects images onto them; pushing pins or gesturing sends input back.",
+    role: "Actuate + Display", flow: "Bidirectional", spatial: ["Inside", "On top"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+  { id: "augmented-dynamic-dataphys", title: "Augmented Dynamic Data Physicalization", authors: "Engert et al.", year: 2025, category: "Actuated + Overlay",
+    physical: "Shape-changing physical data representations", digital: "High-resolution virtual content, AR",
+    combination: "Shape-changing physical data is combined with AR virtual content aligned to it.",
+    role: "Actuate + Display", flow: "Digital → Physical", spatial: ["Inside", "On top", "Around"], collaboration: "Individual", encodesData: "Yes",
+    url: "https://doi.org/10.1109/TVCG.2025.3547432", notes: "To check: whether the physical part is also used as input." },
+  { id: "emerge", title: "EMERGE: Exploring Interactions with Physically Dynamic Bar Charts", authors: "Taher et al.", year: 2015, category: "Actuated + Overlay",
+    physical: "10×10 interactive bar chart", digital: "Projection, RGB LEDs, Arduino, touch detection",
+    combination: "Motorized bars change height; projection and LEDs add color and highlights; touching the bars acts as input.",
+    role: "Actuate + Display", flow: "Bidirectional", spatial: ["Inside", "On top"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "CHI 2015." },
+  { id: "emerge-followup", title: "Follow-up research on EMERGE", authors: "Taher et al.", year: 2017, category: "Actuated + Overlay",
+    physical: "10×10 interactive bar chart", digital: "Touch screen, motors and software, RGB LEDs",
+    combination: "Motors drive the bar heights; a separate touch screen controls the chart; LEDs highlight bars.",
+    role: "Actuate + Display", flow: "Bidirectional", spatial: ["Inside", "Separate"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+
+  { id: "eco-garden", title: "Eco-Garden: Encouraging Sustainable Practices in Households", authors: "", year: 2024, category: "Actuated",
+    physical: "Wooden box with three disks; a bee rotates on each disk to show consumption", digital: "Addressable LEDs; companion mobile app with detailed data and targets",
+    combination: "Consumption data drives the bee's position and the LED flowers; a separate mobile app sets targets and shows details.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside", "Separate"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "watermap", title: "Watermap: A Physical Live Weather Visualization", authors: "", year: 2021, category: "Actuated",
+    physical: "Wooden pedestal with a recessed world map filled with sand", digital: "Mini-computer positions a water tank above the map from live weather data",
+    combination: "Live weather data is turned into physical water drops at the matching location on the map.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Above"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "cairnform", title: "CairnFORM: a Physical Ring Chart Showing Renewable Energy Data", authors: "", year: 2018, category: "Actuated",
+    physical: "Stack of expandable illuminated rings that change cylindrical shape", digital: "Motorized, illuminated rings driven by renewable energy forecasts",
+    combination: "Forecast data drives the shape and lighting of the rings.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Shared", encodesData: "Yes", url: "http://youtu.be/wZ_3CtDllbA", notes: "" },
+  { id: "podium", title: "Podium: Physical Competition Monitor", authors: "", year: 2016, category: "Actuated",
+    physical: "Physical device showing brands' comparative rankings", digital: "Internet-connected; real-time social media data",
+    combination: "Real-time online data drives the physical ranking display.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "fizviz", title: "FizViz", authors: "", year: 2016, category: "Actuated",
+    physical: "Clock-like, wall-mounted gauge; several can be hung together", digital: "Displays data chosen by users (mechanism not described)",
+    combination: "Digital data chosen by users drives the physical gauge.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "prism-map-italy", title: "Actuated Prism Map of Italy", authors: "", year: 2016, category: "Actuated",
+    physical: "3D-printed prism map; region heights show a regional statistic", digital: "Arduino-driven actuation of each region",
+    combination: "Regional statistics drive the height of each physical region.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "Invites people to touch the data." },
+  { id: "physical-weather-display", title: "Physical Weather Display", authors: "", year: 2015, category: "Actuated",
+    physical: "Box simulating weather: dripping water for rain, mist for clouds", digital: "Wireless real-time forecasts; colour-changing LEDs for temperature",
+    combination: "Weather data drives physical effects (water, mist) and LED colors.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+  { id: "dynamic-bar-chart", title: "Dynamic Bar Chart (Finances)", authors: "", year: 2010, category: "Actuated",
+    physical: "Physical bar chart of income vs. expenditure", digital: "Bars change with financial data (mechanism not described)",
+    combination: "Financial data drives the bar heights.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Individual", encodesData: "Yes", url: "", notes: "" },
+  { id: "pulse", title: "Pulse: Animated Heart", authors: "", year: 2009, category: "Actuated",
+    physical: "Cone-shaped object with 24 areas based on Plutchik's emotion model", digital: "Blog entries matched against an emotion list",
+    combination: "Text analysis of blog entries drives the object's shape.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" },
+  { id: "centograph", title: "Centograph", authors: "", year: 2009, category: "Actuated",
+    physical: "Ten actuated bar charts of keyword popularity in news over time", digital: "Separate desktop search interface querying the Google News Archive",
+    combination: "A separate desktop interface sends queries; the results drive the physical bars.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside", "Separate"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "Digital part runs in parallel." },
+  { id: "datamorphose", title: "DataMorphose: Animated Sails", authors: "", year: 2009, category: "Actuated",
+    physical: "Canvas sails in a room; tension, speed, position and shape encode data", digital: "Data streams projected into the room",
+    combination: "Data streams drive the sails' tension, speed, position and shape in the room.",
+    role: "Actuate", flow: "Digital → Physical", spatial: ["Inside"], collaboration: "Shared", encodesData: "Yes", url: "", notes: "" }
+];
+
+/* ---------- configuration ---------- */
+const DIMENSIONS = [
+  { key: "role", label: "Role of digital", values: ["Display", "Actuate + Display", "Actuate"] },
+  { key: "flow", label: "Information flow", values: ["Digital → Physical", "Physical → Digital", "Bidirectional"] },
+  { key: "spatial", label: "Spatial relation", values: ["On top", "Underneath", "Around", "Above", "Inside", "Separate"], multi: true },
+  { key: "collaboration", label: "Collaboration", values: ["Individual", "Presentation", "Shared", "Collaboration"] },
+  { key: "category", label: "Category", values: ["Pure Overlay", "Actuated + Overlay", "Actuated"] }
+];
+const ROLE_COLOR = { "Display": "var(--display)", "Actuate + Display": "var(--both)", "Actuate": "var(--actuate)" };
+
+const state = { q: "", view: "cards", sort: "new", filters: Object.fromEntries(DIMENSIONS.map(d => [d.key, new Set()])) };
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const valuesOf = (p, key) => Array.isArray(p[key]) ? p[key] : [p[key]];
+
+function placeholder(p) {
+  const color = { "Display": "#3c7fa6", "Actuate + Display": "#7a5aa6", "Actuate": "#c2643a" }[p.role] || "#888";
+  let glyph;
+  if (p.role === "Display") {
+    glyph = `<rect x="110" y="95" width="100" height="60" rx="6" fill="#fff" opacity=".9"/>
+             <rect x="95" y="70" width="130" height="40" rx="6" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 5" opacity=".8"/>`;
+  } else if (p.role === "Actuate") {
+    glyph = [0, 1, 2, 3, 4].map(i => { const h = [30, 55, 40, 70, 50][i];
+      return `<rect x="${102 + i * 24}" y="${150 - h}" width="16" height="${h}" rx="3" fill="#fff" opacity=".9"/>`; }).join("") +
+      `<path d="M112 72 l0 -14 m-6 6 l6 -6 l6 6" stroke="#fff" stroke-width="3" fill="none" opacity=".8"/>`;
+  } else {
+    glyph = [0, 1, 2, 3, 4].map(i => { const h = [30, 55, 40, 70, 50][i];
+      return `<rect x="${102 + i * 24}" y="${150 - h}" width="16" height="${h}" rx="3" fill="#fff" opacity=".9"/>`; }).join("") +
+      `<rect x="92" y="62" width="136" height="96" rx="6" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 5" opacity=".8"/>`;
+  }
+  return `<svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder for ${esc(p.title)}">
+    <rect width="320" height="200" fill="${color}"/>
+    <rect width="320" height="200" fill="url(#g${p.id})"/>
+    <defs><linearGradient id="g${p.id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#000" stop-opacity=".15"/></linearGradient></defs>
+    ${glyph}
+    <text x="16" y="186" fill="#fff" font-size="13" font-family="sans-serif" opacity=".9">${esc(p.year)}</text>
+  </svg>`;
+}
+
+function imageHTML(p) {
+  const src = p.image || `images/${p.id}.jpg`;
+  return `<img src="${esc(src)}" alt="${esc(p.title)}" loading="lazy" data-id="${esc(p.id)}">`;
+}
+document.addEventListener("error", e => {
+  const img = e.target;
+  if (img.tagName === "IMG" && img.dataset.id) {
+    const p = PAPERS.find(x => x.id === img.dataset.id);
+    if (p) img.outerHTML = placeholder(p);
+  }
+}, true);
+
+/* ---------- filtering ---------- */
+function matches(p, skipKey) {
+  const q = state.q.trim().toLowerCase();
+  if (q) {
+    const hay = [p.title, p.authors, p.physical, p.digital, p.combination, p.notes].join(" ").toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  for (const d of DIMENSIONS) {
+    if (d.key === skipKey) continue;
+    const sel = state.filters[d.key];
+    if (sel.size && !valuesOf(p, d.key).some(v => sel.has(v))) return false;
+  }
+  return true;
+}
+const filtered = () => PAPERS.filter(p => matches(p)).sort((a, b) => state.sort === "new" ? b.year - a.year : a.year - b.year);
+
+/* ---------- rendering ---------- */
+function renderFilters() {
+  $("#filters").innerHTML = DIMENSIONS.map(d => {
+    const pool = PAPERS.filter(p => matches(p, d.key));
+    const chips = d.values.map(v => {
+      const n = pool.filter(p => valuesOf(p, d.key).includes(v)).length;
+      const on = state.filters[d.key].has(v);
+      return `<button class="chip" aria-pressed="${on}" data-key="${d.key}" data-val="${esc(v)}">${esc(v)}<span class="n">${n}</span></button>`;
+    }).join("");
+    return `<div class="fgroup"><span class="label">${d.label}</span>${chips}</div>`;
+  }).join("");
+}
+
+function tagsHTML(p) {
+  return `<span class="tag role" style="background:${ROLE_COLOR[p.role]}">${esc(p.role)}</span>` +
+    `<span class="tag">${esc(p.flow)}</span>` +
+    p.spatial.map(s => `<span class="tag">${esc(s)}</span>`).join("") +
+    `<span class="tag">${esc(p.collaboration)}</span>`;
+}
+
+function renderCards(list) {
+  if (!list.length) return `<div class="empty-state">No cases match these filters.</div>`;
+  return `<div class="grid">` + list.map(p => `
+    <article class="card" tabindex="0" data-open="${esc(p.id)}">
+      <div class="thumb">${imageHTML(p)}</div>
+      <div class="rolebar" style="background:${ROLE_COLOR[p.role]}"></div>
+      <div class="body">
+        <div class="title">${esc(p.title)}</div>
+        <div class="meta">${esc([p.authors, p.year].filter(Boolean).join(" · "))} — ${esc(p.category)}</div>
+        <div class="combo">${esc(p.combination)}</div>
+        <div class="tags">${tagsHTML(p)}</div>
+      </div>
+    </article>`).join("") + `</div>`;
+}
+
+function renderMatrix(list) {
+  const rows = DIMENSIONS.find(d => d.key === "role").values;
+  const cols = DIMENSIONS.find(d => d.key === "collaboration").values;
+  const head = `<tr><th></th>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr>`;
+  const body = rows.map(r => `<tr>
+      <th class="rowhead"><span class="dot" style="background:${ROLE_COLOR[r]}"></span>${esc(r)}</th>
+      ${cols.map(c => {
+        const items = list.filter(p => p.role === r && p.collaboration === c);
+        if (!items.length) return `<td class="empty">Empty</td>`;
+        return `<td>${items.map(p => `<button class="mitem" data-open="${esc(p.id)}">${esc(p.title)} <span class="meta">${esc(p.year)}</span></button>`).join("")}</td>`;
+      }).join("")}
+    </tr>`).join("");
+  return `<div class="matrix-wrap"><table class="matrix">${head}${body}</table></div>
+    <p class="note">Rows: role of the digital part. Columns: how people use the system. Dashed cells are empty in the current selection, possible gaps in the design space.</p>`;
+}
+
+function render() {
+  renderFilters();
+  const list = filtered();
+  const active = DIMENSIONS.reduce((n, d) => n + state.filters[d.key].size, 0) + (state.q ? 1 : 0);
+  $("#status").innerHTML = `<span>${list.length} of ${PAPERS.length} cases</span>` + (active ? `<a id="clear">Clear filters</a>` : "");
+  $("#view").innerHTML = state.view === "cards" ? renderCards(list) : renderMatrix(list);
+}
+
+function openDetail(id) {
+  const p = PAPERS.find(x => x.id === id);
+  if (!p) return;
+  const rows = [
+    ["Authors · Year", [p.authors, p.year].filter(Boolean).join(" · ")],
+    ["Category", p.category],
+    ["Physicalization", p.physical],
+    ["Digital", p.digital],
+    ["How combined", p.combination],
+    ["Role of digital", p.role],
+    ["Information flow", p.flow],
+    ["Spatial relation", p.spatial.join(", ")],
+    ["Collaboration", p.collaboration],
+    ["Object encodes data", p.encodesData],
+    ["Notes", p.notes],
+    ["Link", p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url)}</a>` : ""]
+  ].filter(([, v]) => v);
+  const d = $("#detail");
+  d.innerHTML = `<div class="dhead"><h2 id="dtitle">${esc(p.title)}</h2><button class="close" aria-label="Close">×</button></div>
+    <div class="dimg">${imageHTML(p)}</div>
+    <dl class="fields">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${k === "Link" ? v : esc(v)}</dd>`).join("")}</dl>`;
+  d.showModal();
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (chip) {
+    const set = state.filters[chip.dataset.key];
+    set.has(chip.dataset.val) ? set.delete(chip.dataset.val) : set.add(chip.dataset.val);
+    return render();
+  }
+  if (e.target.id === "clear") {
+    DIMENSIONS.forEach(d => state.filters[d.key].clear());
+    state.q = ""; $("#search").value = "";
+    return render();
+  }
+  const opener = e.target.closest("[data-open]");
+  if (opener) return openDetail(opener.dataset.open);
+  if (e.target.closest(".close") || e.target === $("#detail")) $("#detail").close();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.matches(".card")) openDetail(e.target.dataset.open);
+});
+$("#search").addEventListener("input", e => { state.q = e.target.value; render(); });
+function setView(v) {
+  state.view = v;
+  $("#viewCards").setAttribute("aria-pressed", v === "cards");
+  $("#viewMatrix").setAttribute("aria-pressed", v === "matrix");
+  render();
+}
+$("#viewCards").onclick = () => setView("cards");
+$("#viewMatrix").onclick = () => setView("matrix");
+function setSort(s) {
+  state.sort = s;
+  $("#sortNew").setAttribute("aria-pressed", s === "new");
+  $("#sortOld").setAttribute("aria-pressed", s === "old");
+  render();
+}
+$("#sortNew").onclick = () => setSort("new");
+$("#sortOld").onclick = () => setSort("old");
+$("#themeBtn").onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+};
+
+render();
+</script>
+</body>
+</html>
